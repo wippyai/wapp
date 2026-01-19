@@ -1,6 +1,6 @@
 # wapp
 
-WAPP (Wippy Application Pack) is a binary archive format for packaging filesystem trees with metadata.
+WAPP (Wippy Application Pack) is a binary archive format for packaging filesystem trees, registry entries, and metadata.
 
 ## Format Structure
 
@@ -13,11 +13,20 @@ Header (268 bytes) + Data Frames + Compressed TOC + Footer (16 bytes)
 - **TOC**: Msgpack-encoded table of contents (zstd compressed)
 - **Footer**: TOC offset and size for footer-first reading
 
+## Contents
+
+A WAPP file can contain:
+
+- **Metadata**: Pack-level key-value metadata
+- **Registry Entries**: Typed records with ID, Kind, Meta, and Data fields for storing configuration, manifests, or any structured data
+- **Resources**: Filesystem trees with per-file compression and integrity hashes
+
 ## Features
 
 - Per-file zstd compression (skips already-compressed formats)
 - Lazy loading with footer-first reading
 - Multiple filesystem tree resources per pack
+- Registry entries for structured data storage
 - SHA-256 integrity verification
 - O(1) file and resource lookups
 - Concurrent-safe reads with decompression cache
@@ -26,7 +35,7 @@ Header (268 bytes) + Data Frames + Compressed TOC + Footer (16 bytes)
 ## Installation
 
 ```bash
-go get github.com/wippyai/wapp
+go get git.spiralscout.com/wippy/wapp
 ```
 
 ## Usage
@@ -36,10 +45,24 @@ go get github.com/wippyai/wapp
 ```go
 writer := wapp.NewWriter()
 
-// Single resource
+// Pack with entries and filesystem
+entries := []wapp.Entry{
+    {
+        ID:   wapp.NewID("app", "manifest"),
+        Kind: "manifest",
+        Meta: wapp.Metadata{"version": "1.0"},
+        Data: map[string]any{"name": "myapp", "routes": []string{"/api", "/web"}},
+    },
+    {
+        ID:   wapp.NewID("app", "config"),
+        Kind: "config",
+        Data: map[string]any{"debug": false, "port": 8080},
+    },
+}
+
 err := writer.Pack(
     wapp.Metadata{"version": "1.0"},
-    []wapp.Entry{{ID: wapp.NewID("app", "config"), Kind: "config"}},
+    entries,
     os.DirFS("./myapp"),
     wapp.NewID("app", "files"),
     nil,
@@ -66,11 +89,14 @@ err := writer.PackEntries(metadata, entries, outputFile)
 ```go
 reader, err := wapp.NewReader(file)
 
-// Get metadata
+// Get pack metadata
 meta, err := reader.GetMetadata()
 
-// Get entries
+// Get registry entries
 entries, err := reader.GetEntries()
+for _, entry := range entries {
+    fmt.Printf("Entry: %s, Kind: %s\n", entry.ID, entry.Kind)
+}
 
 // List resources
 resources := reader.ListResources()
@@ -80,7 +106,7 @@ fsys, err := reader.GetFS(wapp.NewID("app", "files"))
 
 // Use standard fs operations
 data, err := fs.ReadFile(fsys, "config.json")
-entries, err := fs.ReadDir(fsys, "templates")
+dirEntries, err := fs.ReadDir(fsys, "templates")
 ```
 
 ### Options
