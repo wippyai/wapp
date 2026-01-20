@@ -21,7 +21,7 @@ func (id ID) String() string {
 	if id.Namespace == "" {
 		return id.Name
 	}
-	return id.Namespace + "/" + id.Name
+	return id.Namespace + ":" + id.Name
 }
 
 // Equal checks if two IDs are equal.
