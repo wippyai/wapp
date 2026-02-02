@@ -320,7 +320,7 @@ func TestInvalidTOCBounds(t *testing.T) {
 	})
 }
 
-func TestConcurrentReads(t *testing.T) {
+func TestConcurrentReads(_ *testing.T) {
 	fsys := fstest.MapFS{
 		"a.txt": &fstest.MapFile{Data: []byte("content-a"), Mode: 0644},
 		"b.txt": &fstest.MapFile{Data: []byte("content-b"), Mode: 0644},
@@ -340,8 +340,8 @@ func TestConcurrentReads(t *testing.T) {
 			for j := 0; j < 10; j++ {
 				for _, name := range []string{"a.txt", "b.txt", "c.txt"} {
 					file, _ := packFS.Open(name)
-					io.ReadAll(file)
-					file.Close()
+					_, _ = io.ReadAll(file)
+					_ = file.Close()
 				}
 			}
 			done <- true

@@ -1,4 +1,4 @@
-module git.spiralscout.com/wippy/wapp
+module github.com/wippyai/wapp
 
 go 1.23
 

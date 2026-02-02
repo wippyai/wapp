@@ -17,9 +17,9 @@ func TestID(t *testing.T) {
 			id       ID
 			expected string
 		}{
-			{NewID("ns", "name"), "ns/name"},
+			{NewID("ns", "name"), "ns:name"},
 			{NewID("", "name"), "name"},
-			{NewID("org", "pkg"), "org/pkg"},
+			{NewID("org", "pkg"), "org:pkg"},
 		}
 
 		for _, tt := range tests {

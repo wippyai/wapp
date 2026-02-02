@@ -210,7 +210,7 @@ func TestProgressCallback(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	writer := NewWriter(WithProgressCallback(func(id ID, current, total int) {
+	writer := NewWriter(WithProgressCallback(func(_ ID, current, total int) {
 		progressCalls = append(progressCalls, struct {
 			current int
 			total   int

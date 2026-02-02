@@ -108,8 +108,8 @@ func TestStructuredErrors(t *testing.T) {
 			t.Error("Expected ReadError type")
 		}
 
-		if readErr.Path != "nonexistent/resource" {
-			t.Errorf("Path = %q, want 'nonexistent/resource'", readErr.Path)
+		if readErr.Path != "nonexistent:resource" {
+			t.Errorf("Path = %q, want 'nonexistent:resource'", readErr.Path)
 		}
 	})
 

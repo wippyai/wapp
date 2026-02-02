@@ -35,7 +35,7 @@ A WAPP file can contain:
 ## Installation
 
 ```bash
-go get git.spiralscout.com/wippy/wapp
+go get github.com/wippyai/wapp
 ```
 
 ## Usage
