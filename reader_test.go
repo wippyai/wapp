@@ -389,3 +389,54 @@ func TestDecompressionCacheLimit(t *testing.T) {
 		}
 	}
 }
+
+func TestNormalizeTreeResourceClearsStaleSmallFileChunks(t *testing.T) {
+	tree := &TreeResource{
+		Files: map[string]FileEntry{
+			"assets/utils.js": {
+				Size:           25,
+				Compressed:     true,
+				CompressedSize: 19,
+				Location: FileLocation{
+					FrameIndex: 3,
+					Offset:     256,
+					Chunks: []ChunkInfo{
+						{Offset: 0, Size: uint32(ChunkSize), FrameIndex: 3, FrameOffset: 128},
+						{Offset: ChunkSize, Size: 7, FrameIndex: 3, FrameOffset: 128 + ChunkSize},
+					},
+				},
+			},
+		},
+	}
+
+	if err := normalizeTreeResource(tree); err != nil {
+		t.Fatalf("normalizeTreeResource failed: %v", err)
+	}
+
+	if got := len(tree.Files["assets/utils.js"].Location.Chunks); got != 0 {
+		t.Fatalf("chunks length = %d, want 0", got)
+	}
+}
+
+func TestNormalizeTreeResourceRejectsInvalidLargeChunks(t *testing.T) {
+	tree := &TreeResource{
+		Files: map[string]FileEntry{
+			"assets/worker.js": {
+				Size:           3 * ChunkSize,
+				Compressed:     true,
+				CompressedSize: 2*ChunkSize + 10,
+				Location: FileLocation{
+					FrameIndex: 3,
+					Offset:     128,
+					Chunks: []ChunkInfo{
+						{Offset: 0, Size: uint32(ChunkSize), FrameIndex: 3, FrameOffset: 128},
+					},
+				},
+			},
+		},
+	}
+
+	if err := normalizeTreeResource(tree); err == nil {
+		t.Fatal("normalizeTreeResource succeeded with incomplete large-file chunks")
+	}
+}

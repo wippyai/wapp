@@ -3,6 +3,7 @@ package wapp
 import (
 	"bytes"
 	"io"
+	"math/rand"
 	"path/filepath"
 	"testing"
 	"testing/fstest"
@@ -321,5 +322,50 @@ func TestLargeFileChunking(t *testing.T) {
 
 	if !bytes.Equal(readData, largeData) {
 		t.Error("Large file data mismatch")
+	}
+}
+
+func TestPackFilesystemSmallFileAfterChunkedFile(t *testing.T) {
+	largeData := make([]byte, 2*1024*1024)
+	rng := rand.New(rand.NewSource(1))
+	if _, err := rng.Read(largeData); err != nil {
+		t.Fatalf("fill large data: %v", err)
+	}
+	smallData := []byte("function tiny(){return 42}\n")
+
+	fsys := fstest.MapFS{
+		"assets/ts.worker.js": &fstest.MapFile{Data: largeData, Mode: 0644},
+		"assets/utils.js":     &fstest.MapFile{Data: smallData, Mode: 0644},
+	}
+
+	var buf bytes.Buffer
+	writer := NewWriter()
+	resourceID := NewID("test", "assets")
+	if err := writer.Pack(Metadata{}, nil, fsys, resourceID, nil, &buf); err != nil {
+		t.Fatalf("Pack failed: %v", err)
+	}
+
+	reader, err := NewReader(bytes.NewReader(buf.Bytes()))
+	if err != nil {
+		t.Fatalf("NewReader failed: %v", err)
+	}
+
+	packFS, err := reader.GetFS(resourceID)
+	if err != nil {
+		t.Fatalf("GetFS failed: %v", err)
+	}
+
+	file, err := packFS.Open("assets/utils.js")
+	if err != nil {
+		t.Fatalf("Open small file failed: %v", err)
+	}
+	data, err := io.ReadAll(file)
+	_ = file.Close()
+	if err != nil {
+		t.Fatalf("Read small file failed: %v", err)
+	}
+
+	if !bytes.Equal(data, smallData) {
+		t.Fatalf("small file data mismatch: got %q want %q", data, smallData)
 	}
 }

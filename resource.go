@@ -23,12 +23,12 @@ type TreeResource struct {
 // FileEntry describes a file in a tree resource.
 type FileEntry struct {
 	Size           uint64       `json:"Size" msgpack:"size"`
-	CompressedSize uint64       `json:"CompressedSize,omitempty" msgpack:"compressed_size,omitempty"`
+	CompressedSize uint64       `json:"CompressedSize" msgpack:"compressed_size"`
 	Mode           uint32       `json:"Mode" msgpack:"mode"`
 	ModTime        int64        `json:"ModTime" msgpack:"mtime"`
 	Hash           string       `json:"Hash" msgpack:"hash"`
 	Compressed     bool         `json:"Compressed" msgpack:"compressed"`
-	Meta           Metadata     `json:"Meta,omitempty" msgpack:"meta,omitempty"`
+	Meta           Metadata     `json:"Meta" msgpack:"meta"`
 	Location       FileLocation `json:"Location" msgpack:"location"`
 }
 
@@ -36,7 +36,7 @@ type FileEntry struct {
 type FileLocation struct {
 	FrameIndex uint32      `json:"FrameIndex" msgpack:"frame"`
 	Offset     uint64      `json:"Offset" msgpack:"offset"`
-	Chunks     []ChunkInfo `json:"Chunks,omitempty" msgpack:"chunks,omitempty"`
+	Chunks     []ChunkInfo `json:"Chunks" msgpack:"chunks"`
 }
 
 // ChunkInfo describes a chunk of a large file.

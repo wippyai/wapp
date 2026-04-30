@@ -451,6 +451,9 @@ func (r *Reader) loadResource(id ID) (any, error) {
 		if err := decoder.Decode(tree); err != nil {
 			return nil, errDecodeTreeResource(err)
 		}
+		if err := normalizeTreeResource(tree); err != nil {
+			return nil, err
+		}
 		res = tree
 	default:
 		return nil, errUnknownResourceType(resInfo.Type)
@@ -462,6 +465,60 @@ func (r *Reader) loadResource(id ID) (any, error) {
 	r.resourcesMutex.Unlock()
 
 	return res, nil
+}
+
+func normalizeTreeResource(tree *TreeResource) error {
+	for filePath, entry := range tree.Files {
+		if len(entry.Location.Chunks) == 0 {
+			continue
+		}
+
+		payloadSize := entry.Size
+		if entry.Compressed {
+			payloadSize = entry.CompressedSize
+		}
+
+		// Older packs omitted nil chunks in map values, which let the decoder
+		// retain the previous file's chunk slice on following small files.
+		if payloadSize <= ChunkSize {
+			entry.Location.Chunks = nil
+			tree.Files[filePath] = entry
+			continue
+		}
+
+		if err := validateFileChunks(filePath, entry, payloadSize); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func validateFileChunks(filePath string, entry FileEntry, payloadSize uint64) error {
+	var offset uint64
+	for i, chunk := range entry.Location.Chunks {
+		if chunk.Size == 0 {
+			return errInvalidTOC(fmt.Sprintf("file %q chunk %d has zero size", filePath, i))
+		}
+		if chunk.Offset != offset {
+			return errInvalidTOC(fmt.Sprintf("file %q chunk %d offset %d, want %d", filePath, i, chunk.Offset, offset))
+		}
+		offset += uint64(chunk.Size)
+		if offset > payloadSize {
+			return errInvalidTOC(fmt.Sprintf("file %q chunks exceed payload size %d", filePath, payloadSize))
+		}
+	}
+
+	if offset != payloadSize {
+		return errInvalidTOC(fmt.Sprintf("file %q chunks cover %d bytes, want %d", filePath, offset, payloadSize))
+	}
+
+	first := entry.Location.Chunks[0]
+	if entry.Location.FrameIndex != first.FrameIndex || entry.Location.Offset != first.FrameOffset {
+		return errInvalidTOC(fmt.Sprintf("file %q location does not point at first chunk", filePath))
+	}
+
+	return nil
 }
 
 // readFrame reads and decompresses a frame.
