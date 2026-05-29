@@ -20,7 +20,7 @@ func TestTreeResource(t *testing.T) {
 	tree := &TreeResource{
 		ID:    NewID("test", "tree"),
 		Meta:  Metadata{"version": "1.0"},
-		Files: make(map[string]FileEntry),
+		Files: make(map[string]*FileEntry),
 		Dirs:  make(map[string][]string),
 	}
 
