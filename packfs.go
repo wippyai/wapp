@@ -51,7 +51,7 @@ func (pfs *packFS) Open(name string) (fs.File, error) {
 		return &packFile{
 			name:     path.Base(name),
 			path:     name,
-			entry:    entry,
+			entry:    *entry,
 			reader:   pfs.reader,
 			cache:    pfs.cache,
 			cacheKey: pfs.cacheKey(name),

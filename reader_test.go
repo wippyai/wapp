@@ -392,7 +392,7 @@ func TestDecompressionCacheLimit(t *testing.T) {
 
 func TestNormalizeTreeResourceClearsStaleSmallFileChunks(t *testing.T) {
 	tree := &TreeResource{
-		Files: map[string]FileEntry{
+		Files: map[string]*FileEntry{
 			"assets/utils.js": {
 				Size:           25,
 				Compressed:     true,
@@ -420,7 +420,7 @@ func TestNormalizeTreeResourceClearsStaleSmallFileChunks(t *testing.T) {
 
 func TestNormalizeTreeResourceRejectsInvalidLargeChunks(t *testing.T) {
 	tree := &TreeResource{
-		Files: map[string]FileEntry{
+		Files: map[string]*FileEntry{
 			"assets/worker.js": {
 				Size:           3 * ChunkSize,
 				Compressed:     true,

@@ -280,10 +280,10 @@ func TestCustomCompressionFunc(t *testing.T) {
 }
 
 func TestLargeFileChunking(t *testing.T) {
-	largeData := make([]byte, 2*1024*1024)
-	for i := range largeData {
-		largeData[i] = byte(i % 256)
-	}
+	// Incompressible data so finalData stays above ChunkSize and the file is
+	// actually split into multiple chunks (compressible data would shrink below
+	// ChunkSize and never exercise the chunk path).
+	largeData := randomBytes(t, 2*1024*1024+97)
 
 	fsys := fstest.MapFS{
 		"large.bin": &fstest.MapFile{Data: largeData, Mode: 0644},
@@ -300,12 +300,20 @@ func TestLargeFileChunking(t *testing.T) {
 		t.Fatalf("NewReader failed: %v", err)
 	}
 
-	packFS, err := reader.GetFS(NewID("test", "large"))
+	pfs, err := reader.GetFS(NewID("test", "large"))
 	if err != nil {
 		t.Fatalf("GetFS failed: %v", err)
 	}
 
-	file, err := packFS.Open("large.bin")
+	if pf, ok := pfs.(*packFS); ok {
+		if got := len(pf.tree.Files["large.bin"].Location.Chunks); got < 2 {
+			t.Fatalf("expected the file to be split into multiple chunks, got %d", got)
+		}
+	} else {
+		t.Fatalf("GetFS returned %T, want *packFS", pfs)
+	}
+
+	file, err := pfs.Open("large.bin")
 	if err != nil {
 		t.Fatalf("Open failed: %v", err)
 	}

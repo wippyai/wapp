@@ -262,7 +262,7 @@ func (w *Writer) processFilesystemWithOffset(
 	tree := &TreeResource{
 		ID:    id,
 		Meta:  meta,
-		Files: make(map[string]FileEntry),
+		Files: make(map[string]*FileEntry),
 		Dirs:  make(map[string][]string),
 	}
 
@@ -422,7 +422,7 @@ func (w *Writer) processFilesystemWithOffset(
 			entry.CompressedSize = uint64(len(finalData))
 		}
 
-		tree.Files[filePath] = entry
+		tree.Files[filePath] = &entry
 
 		dir := path.Dir(filePath)
 		if dir == "." {

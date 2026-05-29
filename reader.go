@@ -478,11 +478,8 @@ func normalizeTreeResource(tree *TreeResource) error {
 			payloadSize = entry.CompressedSize
 		}
 
-		// Older packs omitted nil chunks in map values, which let the decoder
-		// retain the previous file's chunk slice on following small files.
 		if payloadSize <= ChunkSize {
 			entry.Location.Chunks = nil
-			tree.Files[filePath] = entry
 			continue
 		}
 
@@ -494,7 +491,7 @@ func normalizeTreeResource(tree *TreeResource) error {
 	return nil
 }
 
-func validateFileChunks(filePath string, entry FileEntry, payloadSize uint64) error {
+func validateFileChunks(filePath string, entry *FileEntry, payloadSize uint64) error {
 	var offset uint64
 	for i, chunk := range entry.Location.Chunks {
 		if chunk.Size == 0 {

@@ -13,8 +13,11 @@ type TreeResource struct {
 	ID   ID       `json:"ID" msgpack:"id"`
 	Meta Metadata `json:"Meta" msgpack:"meta"`
 
-	// Path index for O(1) file lookups.
-	Files map[string]FileEntry `json:"Files" msgpack:"files"`
+	// Path index for O(1) file lookups. Pointer values are required: go-msgpack
+	// shares the chunk-slice backing array across map entries when decoding into
+	// struct values, so a later, shorter file would overwrite an earlier file's
+	// chunks in place. Pointer values force a fresh FileEntry per entry on decode.
+	Files map[string]*FileEntry `json:"Files" msgpack:"files"`
 
 	// Directory listings for ReadDir.
 	Dirs map[string][]string `json:"Dirs" msgpack:"dirs"`
