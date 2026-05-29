@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
+	"fmt"
 	"io"
+	mrand "math/rand"
 	"testing"
 	"testing/fstest"
 )
@@ -92,5 +94,73 @@ func TestLargeChunkedFilesRoundTrip(t *testing.T) {
 		if sha256.Sum256(got) != sha256.Sum256(want) {
 			t.Fatalf("file %q content mismatch", name)
 		}
+	}
+}
+
+// TestChunkedRoundTripFuzz packs many randomized (but seed-deterministic) module
+// shapes and verifies every file reads back byte-identical. Sizes are biased to
+// chunk (1 MiB) and frame (10 MiB) boundaries, and names are randomized so the
+// canonical decode order — and thus the adjacency of chunked files that triggered
+// the backing-array reuse corruption — varies across iterations.
+func TestChunkedRoundTripFuzz(t *testing.T) {
+	const chunk = 1 << 20
+	pickSize := func(rng *mrand.Rand) int {
+		switch rng.Intn(8) {
+		case 0:
+			return rng.Intn(4096) // tiny / below ChunkSize
+		case 1:
+			return chunk // exact boundary
+		case 2:
+			return chunk + rng.Intn(3) - 1 // boundary +/-1
+		case 3:
+			return (2 + rng.Intn(4)) * chunk // multi-chunk
+		default:
+			return rng.Intn(5 * chunk) // mixed
+		}
+	}
+
+	for seed := int64(0); seed < 40; seed++ {
+		seed := seed
+		t.Run(fmt.Sprintf("seed-%d", seed), func(t *testing.T) {
+			rng := mrand.New(mrand.NewSource(seed))
+			fsys := fstest.MapFS{}
+			want := map[string][32]byte{}
+			n := 2 + rng.Intn(8)
+			for i := 0; i < n; i++ {
+				name := fmt.Sprintf("assets/%08x.js", rng.Uint32())
+				data := make([]byte, pickSize(rng))
+				_, _ = rng.Read(data) // incompressible -> stays chunked
+				fsys[name] = &fstest.MapFile{Data: data, Mode: 0o644}
+				want[name] = sha256.Sum256(data)
+			}
+
+			var buf bytes.Buffer
+			id := NewID("fuzz", "public_files")
+			if err := NewWriter().Pack(Metadata{}, nil, fsys, id, nil, &buf); err != nil {
+				t.Fatalf("Pack: %v", err)
+			}
+			r, err := NewReader(bytes.NewReader(buf.Bytes()))
+			if err != nil {
+				t.Fatalf("NewReader: %v", err)
+			}
+			pfs, err := r.GetFS(id)
+			if err != nil {
+				t.Fatalf("GetFS (validate toc): %v", err)
+			}
+			for name, sum := range want {
+				f, err := pfs.Open(name)
+				if err != nil {
+					t.Fatalf("Open %q: %v", name, err)
+				}
+				got, err := io.ReadAll(f)
+				_ = f.Close()
+				if err != nil {
+					t.Fatalf("read %q: %v", name, err)
+				}
+				if sha256.Sum256(got) != sum {
+					t.Fatalf("file %q content mismatch (%d bytes)", name, len(got))
+				}
+			}
+		})
 	}
 }
