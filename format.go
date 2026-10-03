@@ -161,12 +161,7 @@ func decompressZstd(compressed []byte) ([]byte, error) {
 	decoder := zstdDecoderPool.Get().(*zstd.Decoder)
 	defer zstdDecoderPool.Put(decoder)
 
-	err := decoder.Reset(bytes.NewReader(compressed))
-	if err != nil {
-		return nil, errResetZstdDecoder(err)
-	}
-
-	return io.ReadAll(decoder)
+	return decoder.DecodeAll(compressed, nil)
 }
 
 // compressZstd compresses data using pooled encoder.

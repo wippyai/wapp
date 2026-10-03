@@ -179,10 +179,6 @@ func errFrameHashMismatch(detail string) error {
 	return &FormatError{Op: "verify frame hash", Detail: detail, Err: ErrFrameHashMismatch}
 }
 
-func errResetZstdDecoder(cause error) error {
-	return &ReadError{Op: "reset zstd", Err: cause}
-}
-
 // Writer error constructors.
 
 func errWriteHeader(cause error) error {
